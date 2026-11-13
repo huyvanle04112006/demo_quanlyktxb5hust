@@ -1,0 +1,1884 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hệ thống Quản lý KTX B5 - HUST (Nhóm 62)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; -webkit-tap-highlight-color: transparent; }
+        .hust-red { background-color: #b71c1c; }
+        .tab-active { background-color: #7f1d1d; border-left: 4px solid #ffffff; font-weight: 600; }
+        .mobile-tab-active { color: #b71c1c !important; font-weight: 700; }
+        .mobile-tab-active i { transform: scale(1.1); transition: transform 0.15s; }
+        .table-responsive {
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: thin;
+        }
+        .chart-box {
+            position: relative;
+            height: 220px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 antialiased selection:bg-red-200">
+
+    <!-- ==================== MÀN HÌNH ĐĂNG NHẬP ==================== -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-900 via-red-800 to-gray-900 p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="hust-red p-6 text-white text-center">
+                <div class="w-14 h-14 bg-white text-red-700 rounded-2xl mx-auto flex items-center justify-center text-2xl font-extrabold shadow-md mb-2.5">
+                    B5
+                </div>
+                <h1 class="text-lg md:text-xl font-bold uppercase tracking-wide">Hệ Thống Quản Lý KTX B5</h1>
+                <p class="text-xs text-red-200 mt-0.5">Đại học Bách Khoa Hà Nội • Nhóm 62</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="p-5 md:p-6 space-y-4" autocomplete="off">
+    <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded text-xs text-amber-800">
+        <i class="fas fa-bolt mr-1 text-amber-600"></i>
+        <b>Chế độ Demo nhanh:</b> Chọn 1 trong 2 tài khoản dưới đây để đăng nhập thẳng vào hệ thống.
+    </div>
+
+    <!-- Giữ lại các thẻ ẩn để hàm handleLogin(event) gốc của bạn hoạt động bình thường -->
+    <div id="loginError" class="hidden bg-red-50 border border-red-300 text-red-700 px-3 py-2 rounded-lg text-xs"></div>
+    <input type="hidden" id="loginUsername">
+    <input type="hidden" id="loginPassword">
+
+    <!-- NÚT 1: ĐĂNG NHẬP TÀI KHOẢN CÔ QUẢN LÝ -->
+    <button type="submit"
+        onclick="document.getElementById('loginUsername').value = db.managerAccount.username; document.getElementById('loginPassword').value = db.managerAccount.password;"
+        class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-red-800 to-red-700 hover:from-red-900 hover:to-red-800 text-white rounded-xl shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 text-left group">
+        <div class="flex items-center space-x-3.5">
+            <div class="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center text-lg">
+                <i class="fas fa-user-shield text-yellow-300"></i>
+            </div>
+            <div>
+                <div class="font-bold text-sm uppercase tracking-wide">Tài khoản Người Quản Lý</div>
+                <div class="text-xs text-red-100 mt-0.5">Cô Quản lý KTX B5 (Toàn quyền hệ thống)</div>
+            </div>
+        </div>
+        <i class="fas fa-sign-in-alt text-white/80 group-hover:translate-x-1 transition text-lg"></i>
+    </button>
+
+    <!-- NÚT 2: ĐĂNG NHẬP TÀI KHOẢN SINH VIÊN -->
+    <button type="submit"
+        onclick="const sv = db.students.find(s => s.mssv === '202414174') || db.students[0]; document.getElementById('loginUsername').value = sv.username || sv.mssv; document.getElementById('loginPassword').value = sv.password;"
+        class="w-full flex items-center justify-between p-4 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 text-white rounded-xl shadow-md hover:shadow-lg transition transform hover:-translate-y-0.5 text-left group">
+        <div class="flex items-center space-x-3.5">
+            <div class="w-11 h-11 rounded-lg bg-white/15 flex items-center justify-center text-lg">
+                <i class="fas fa-user-graduate text-blue-200"></i>
+            </div>
+            <div>
+                <div class="font-bold text-sm uppercase tracking-wide">Tài khoản Sinh Viên</div>
+                <div class="text-xs text-blue-100 mt-0.5">Lê Văn Huy - 202414174 (Phòng B5-101)</div>
+            </div>
+        </div>
+        <i class="fas fa-sign-in-alt text-white/80 group-hover:translate-x-1 transition text-lg"></i>
+    </button>
+</form>
+        </div>
+    </div>
+
+    <!-- ==================== GIAO DIỆN CHÍNH SAU ĐĂNG NHẬP ==================== -->
+    <div id="appScreen" class="hidden min-h-screen md:h-screen md:overflow-hidden flex flex-col md:flex-row">
+        
+        <!-- SIDEBAR MÁY TÍNH (Cố định 100% bên trái) -->
+        <aside class="hidden md:flex w-64 hust-red text-white flex-shrink-0 flex-col justify-between shadow-lg md:h-screen md:sticky md:top-0 overflow-y-auto">
+            <div>
+                <div class="p-5 border-b border-red-800 flex items-center space-x-3">
+                    <div class="bg-white text-red-700 font-extrabold rounded-lg p-2 text-xl shadow">B5</div>
+                    <div>
+                        <h1 class="font-bold text-lg leading-tight">KTX B5 - HUST</h1>
+                        <p class="text-xs text-red-200">Quản lý Cơ sở vật chất</p>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-red-900/70 border-b border-red-800">
+                    <div class="flex items-center space-x-2.5">
+                        <i id="userRoleIcon" class="fas fa-user-shield text-xl text-yellow-300"></i>
+                        <div class="overflow-hidden">
+                            <p id="currentUserName" class="font-bold text-sm truncate"></p>
+                            <p id="currentUserSub" class="text-xs text-red-200 truncate"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <nav class="mt-2 space-y-1">
+                    <!-- Chỉ hiển thị cho Cô Quản lý -->
+                    <button onclick="showSection('dashboard')" id="nav-dashboard" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3 tab-active">
+                        <i class="fas fa-chart-pie w-5"></i><span>Tổng quan & Thống kê</span>
+                    </button>
+
+                    <!-- Hiển thị cho cả 2 (Quản lý TK hoặc Hồ sơ cá nhân) -->
+                    <button onclick="showSection('accounts')" id="nav-accounts" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3">
+                        <i class="fas fa-users-cog w-5"></i><span id="label-accounts">Quản lý Tài khoản & SV</span>
+                    </button>
+
+                    <!-- Chỉ hiển thị cho Cô Quản lý -->
+                    <button onclick="showSection('rooms')" id="nav-rooms" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3">
+                        <i class="fas fa-door-open w-5"></i><span>Phòng & Cơ sở vật chất</span>
+                    </button>
+
+                    <button onclick="showSection('repairs')" id="nav-repairs" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3">
+                        <i class="fas fa-tools w-5"></i><span>Yêu cầu Sửa chữa</span>
+                    </button>
+                    <button onclick="showSection('feedbacks')" id="nav-feedbacks" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3">
+                        <i class="fas fa-comment-dots w-5"></i><span>Phản ánh / Khiếu nại</span>
+                    </button>
+                    <button onclick="showSection('bills')" id="nav-bills" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3">
+                        <i class="fas fa-file-invoice-dollar w-5"></i><span id="label-bills">Hóa đơn & Thu phí</span>
+                    </button>
+                    <button onclick="showSection('notices')" id="nav-notices" class="w-full text-left px-5 py-3 hover:bg-red-800 transition flex items-center space-x-3">
+                        <i class="fas fa-bullhorn w-5"></i><span>Thông báo KTX</span>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-red-800 space-y-2 text-xs">
+                <button onclick="openChangePassModal()" class="w-full bg-red-800 hover:bg-red-700 text-white py-2 rounded font-medium flex items-center justify-center space-x-1 border border-red-600">
+                    <i class="fas fa-key"></i><span>Đổi mật khẩu</span>
+                </button>
+                <button onclick="logout()" class="w-full bg-gray-900 hover:bg-black text-white py-2 rounded font-bold flex items-center justify-center space-x-1 shadow">
+                    <i class="fas fa-sign-out-alt"></i><span>Đăng xuất</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- HEADER ĐIỆN THOẠI -->
+        <header class="md:hidden hust-red text-white px-3.5 py-2.5 flex justify-between items-center shadow-md sticky top-0 z-30">
+            <div class="flex items-center space-x-2">
+                <div class="bg-white text-red-700 font-extrabold rounded-md px-2 py-0.5 text-xs shadow">B5</div>
+                <div>
+                    <p id="mobUserName" class="font-bold text-xs leading-tight"></p>
+                    <p id="mobUserRole" class="text-[10px] text-red-200 leading-tight"></p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="openChangePassModal()" title="Đổi mật khẩu" class="bg-red-800 p-1.5 rounded text-xs">
+                    <i class="fas fa-key"></i>
+                </button>
+                <button onclick="logout()" title="Đăng xuất" class="bg-gray-900 px-2 py-1.5 rounded text-xs font-semibold flex items-center space-x-1">
+                    <i class="fas fa-sign-out-alt"></i><span>Thoát</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN CONTENT (Cuộn độc lập bên phải) -->
+        <main id="mainScrollArea" class="flex-1 p-3.5 md:p-6 md:h-screen overflow-y-auto pb-24 md:pb-8">
+            <!-- Top Bar -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 bg-white p-3 md:p-4 rounded-xl shadow-sm border border-gray-200 gap-2">
+                <div>
+                    <h2 id="pageTitle" class="text-base md:text-xl font-bold text-gray-800 leading-snug">Tổng quan & Báo cáo Thống kê</h2>
+                    <p id="roleSubText" class="text-[11px] md:text-xs text-gray-500">Khu nội trú B5 – Đại học Bách Khoa Hà Nội</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end">
+                    <span id="badgeRole" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold"></span>
+                    <div class="flex items-center gap-1.5">
+                        <button id="btnExportCSV" onclick="exportExcelStudents()" class="bg-green-600 hover:bg-green-700 text-white text-[11px] px-2.5 py-1 rounded shadow-sm flex items-center space-x-1 font-semibold">
+                            <i class="fas fa-file-excel"></i><span>Xuất Excel</span>
+                        </button>
+                        <button id="btnResetDemo" onclick="resetDemoData()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-[11px] px-2 py-1 rounded">
+                            <i class="fas fa-sync-alt mr-1"></i>Khôi phục gốc
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1. DASHBOARD & THỐNG KÊ (Chỉ dành cho Cô Quản lý) -->
+            <section id="sec-dashboard" class="space-y-4 md:space-y-6">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-4">
+                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border-l-4 border-blue-600">
+                        <p class="text-[11px] md:text-xs text-gray-500">Tổng số phòng B5</p>
+                        <p id="statTotalRooms" class="text-xl md:text-2xl font-bold text-gray-800 mt-0.5">0</p>
+                        <p id="statEmptyRooms" class="text-[10px] text-blue-600 mt-0.5 truncate"></p>
+                    </div>
+                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border-l-4 border-green-600">
+                        <p class="text-[11px] md:text-xs text-gray-500">Tài khoản Sinh viên</p>
+                        <p id="statTotalStudents" class="text-xl md:text-2xl font-bold text-gray-800 mt-0.5">0</p>
+                        <p id="statActiveStudents" class="text-[10px] text-green-600 mt-0.5 truncate"></p>
+                    </div>
+                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border-l-4 border-amber-500">
+                        <p class="text-[11px] md:text-xs text-gray-500">Sự cố chờ xử lý</p>
+                        <p id="statPendingRepairs" class="text-xl md:text-2xl font-bold text-gray-800 mt-0.5">0</p>
+                        <p class="text-[10px] text-amber-600 mt-0.5">Cần kiểm tra</p>
+                    </div>
+                    <div class="bg-white p-3 md:p-4 rounded-xl shadow-sm border-l-4 border-red-600">
+                        <p class="text-[11px] md:text-xs text-gray-500">Hóa đơn chưa thu</p>
+                        <p id="statUnpaidBills" class="text-xl md:text-2xl font-bold text-gray-800 mt-0.5">0</p>
+                        <p id="statRevenue" class="text-[10px] text-green-600 mt-0.5 truncate"></p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white p-3.5 md:p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="font-bold text-gray-700 mb-2.5 text-xs md:text-sm">Thống kê Tình trạng Phòng KTX B5</h3>
+                        <div class="chart-box">
+                            <canvas id="roomChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-3.5 md:p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="font-bold text-gray-700 mb-2.5 text-xs md:text-sm">Thống kê Tiến độ Sửa chữa CSVC</h3>
+                        <div class="chart-box">
+                            <canvas id="repairChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. QUẢN LÝ TÀI KHOẢN SINH VIÊN (CÔ QUẢN LÝ) / HỒ SƠ CÁ NHÂN (SINH VIÊN) -->
+            <section id="sec-accounts" class="hidden space-y-4 md:space-y-5">
+                <div id="managerAccountPanel" class="space-y-4">
+                    
+                    <!-- KHỐI NHẬP FILE EXCEL TỰ ĐỘNG -->
+                    <div class="bg-gradient-to-r from-emerald-50 via-teal-50 to-white p-4 rounded-xl shadow-sm border border-emerald-300">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                            <div>
+                                <h3 class="font-bold text-emerald-900 text-xs md:text-sm flex items-center">
+                                    <i class="fas fa-file-excel text-emerald-600 text-base mr-2"></i>
+                                    Nhập & Cập nhật Sinh viên tự động từ File Excel (.xlsx, .xls, .csv)
+                                </h3>
+                                <p class="text-[11px] text-emerald-700 mt-0.5">
+                                    Chỉ cần chọn file Excel, hệ thống sẽ tự động thêm mới, phân phòng và sắp xếp phòng theo thứ tự tăng dần.
+                                </p>
+                            </div>
+                            <button type="button" onclick="downloadExcelTemplate()" class="bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-400 font-semibold text-xs px-3 py-1.5 rounded-lg shadow-sm flex items-center space-x-1.5 whitespace-nowrap">
+                                <i class="fas fa-download text-emerald-600"></i>
+                                <span>Tải File Excel Mẫu</span>
+                            </button>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center gap-3 bg-white p-2.5 rounded-lg border border-dashed border-emerald-400">
+                            <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" onchange="handleExcelUpload(event)" class="hidden">
+                            <button type="button" onclick="document.getElementById('excelFileInput').click()" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs flex items-center justify-center space-x-2 shadow">
+                                <i class="fas fa-upload"></i>
+                                <span>Chọn File Excel để Cập nhật ngay</span>
+                            </button>
+                            <span class="text-[11px] text-gray-500 text-center sm:text-left">
+                                Hỗ trợ các cột: <b>MSSV, HoTen, LopKhoa, MaPhong, SDT, Email, MatKhau</b>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- KHỐI THÊM LẺ 1 SINH VIÊN -->
+                    <div class="bg-white p-3.5 md:p-4 rounded-xl shadow-sm border border-red-200">
+                        <div class="flex justify-between items-center mb-2.5">
+                            <h3 class="font-bold text-gray-800 text-xs md:text-sm">
+                                <i class="fas fa-user-plus text-red-700 mr-1.5"></i>Thêm lẻ 1 Sinh viên (Thủ công)
+                            </h3>
+                            <span class="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded font-semibold">Cô Quản Lý</span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Mã số SV (MSSV) *</label>
+                                <input id="accMSSV" oninput="syncUsernameFromMSSV()" placeholder="VD: 202415001" class="w-full border rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Họ và tên Sinh viên *</label>
+                                <input id="accName" placeholder="VD: Nguyễn Văn A" class="w-full border rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Email Sinh viên</label>
+                                <input id="accEmail" type="email" placeholder="VD: sv@sis.hust.edu.vn" class="w-full border rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Lớp / Khóa</label>
+                                <input id="accClass" placeholder="VD: Điện tử 10-K69" class="w-full border rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Số điện thoại</label>
+                                <input id="accPhone" placeholder="VD: 0987654321" class="w-full border rounded-lg p-2 text-xs">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Phân bổ Phòng *</label>
+                                <select id="accRoom" class="w-full border rounded-lg p-2 text-xs"></select>
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Tên đăng nhập cấp cho SV *</label>
+                                <input id="accUsername" placeholder="Tên đăng nhập..." class="w-full border border-blue-400 bg-blue-50/40 rounded-lg p-2 text-xs font-mono">
+                            </div>
+                            <div>
+                                <label class="text-gray-500 font-semibold block mb-0.5">Mật khẩu ban đầu *</label>
+                                <div class="flex">
+                                    <input id="accPassword" value="sv123456" placeholder="Mật khẩu..." class="w-full border border-blue-400 bg-blue-50/40 rounded-l-lg p-2 text-xs font-mono">
+                                    <button type="button" onclick="generateRandomPass()" title="Tạo ngẫu nhiên" class="bg-gray-200 hover:bg-gray-300 px-2.5 rounded-r-lg text-xs">
+                                        <i class="fas fa-dice"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="sm:col-span-2 lg:col-span-4 flex justify-end pt-1">
+                                <button type="button" onclick="createStudentAccount()" class="w-full sm:w-auto hust-red hover:bg-red-800 text-white font-bold py-2 px-5 rounded-lg shadow text-xs">
+                                    <i class="fas fa-check-circle mr-1"></i> Tạo & Cấp Tài Khoản
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG DANH SÁCH SINH VIÊN -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="p-3 border-b bg-gray-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-2">
+                            <div>
+                                <h4 class="font-bold text-gray-800 text-xs md:text-sm">Danh sách Sinh viên & Tài khoản KTX B5</h4>
+                                <p class="text-[11px] text-gray-500">Tổng số: <b id="lblTotalStudentsBadge" class="text-red-700">0</b> sinh viên (Đang sắp xếp theo thứ tự phòng tăng dần)</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+                                <select id="filterAccountRoom" onchange="renderAccounts()" class="border rounded-lg px-2.5 py-1.5 text-xs bg-white font-medium text-gray-700">
+                                    <option value="ALL">Tất cả các phòng</option>
+                                </select>
+                                <select id="sortAccountMode" onchange="renderAccounts()" class="border rounded-lg px-2.5 py-1.5 text-xs bg-white font-medium text-gray-700">
+                                    <option value="ROOM_ASC">Sắp xếp: Phòng tăng dần (B5-101 &rarr; B5-306)</option>
+                                    <option value="MSSV_ASC">Sắp xếp: MSSV tăng dần</option>
+                                    <option value="NAME_ASC">Sắp xếp: Tên A &rarr; Z</option>
+                                </select>
+                                <input type="text" id="searchAccount" oninput="renderAccounts()" placeholder="Tìm MSSV, Tên, Phòng..." class="border rounded-lg px-2.5 py-1.5 text-xs flex-1 sm:w-48 bg-white">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto max-h-[540px] overflow-y-auto table-responsive">
+                            <table class="w-full text-left text-xs min-w-[650px]">
+                                <thead class="bg-gray-100 text-gray-600 uppercase text-[10px] border-b sticky top-0 z-10 shadow-sm">
+                                    <tr>
+                                        <th class="p-2.5 bg-gray-100">STT</th>
+                                        <th class="p-2.5 bg-gray-100">MSSV</th>
+                                        <th class="p-2.5 bg-gray-100">Họ và tên</th>
+                                        <th class="p-2.5 bg-gray-100">Phòng &uarr;</th>
+                                        <th class="p-2.5 bg-gray-100">Lớp / SĐT</th>
+                                        <th class="p-2.5 bg-gray-100">Tên ĐN</th>
+                                        <th class="p-2.5 bg-gray-100">Mật khẩu</th>
+                                        <th class="p-2.5 bg-gray-100">Trạng thái</th>
+                                        <th class="p-2.5 bg-gray-100 text-right">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="accountTableBody" class="divide-y"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hồ sơ Sinh viên -->
+                <div id="studentProfilePanel" class="hidden bg-white p-4 md:p-5 rounded-xl shadow-sm max-w-xl border border-gray-200">
+                    <h3 class="text-sm font-bold text-gray-800 mb-3 border-b pb-2">
+                        <i class="fas fa-id-card text-red-700 mr-1.5"></i>Hồ sơ Chỗ ở & Cá nhân
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <label class="text-gray-500 block">Tên đăng nhập:</label>
+                            <input id="profUsername" disabled class="w-full border bg-gray-100 rounded p-2 mt-0.5 font-mono font-bold">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Mã số SV (MSSV):</label>
+                            <input id="profMSSV" disabled class="w-full border bg-gray-100 rounded p-2 mt-0.5 font-bold">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Họ và tên:</label>
+                            <input id="profName" class="w-full border rounded p-2 mt-0.5">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Email khôi phục:</label>
+                            <input id="profEmail" type="email" class="w-full border rounded p-2 mt-0.5">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Lớp / Khóa:</label>
+                            <input id="profClass" class="w-full border rounded p-2 mt-0.5">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Số điện thoại:</label>
+                            <input id="profPhone" class="w-full border rounded p-2 mt-0.5">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Phòng KTX đang ở:</label>
+                            <input id="profRoom" disabled class="w-full border bg-gray-100 rounded p-2 mt-0.5 font-bold text-red-700">
+                        </div>
+                        <div>
+                            <label class="text-gray-500 block">Trạng thái lưu trú:</label>
+                            <input id="profStatus" disabled class="w-full border bg-gray-100 rounded p-2 mt-0.5 font-semibold text-green-700">
+                        </div>
+                    </div>
+                    <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                        <button type="button" onclick="saveMyProfile()" class="w-full sm:w-auto hust-red hover:bg-red-800 text-white px-4 py-2 rounded-lg text-xs font-semibold">
+                            <i class="fas fa-save mr-1"></i> Lưu thông tin
+                        </button>
+                        <button type="button" onclick="requestCheckout()" class="w-full sm:w-auto bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-xs font-semibold">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Gửi đơn trả phòng
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. QUẢN LÝ PHÒNG (Chỉ dành cho Cô Quản lý) -->
+            <section id="sec-rooms" class="hidden space-y-4">
+                <div class="bg-white p-3 rounded-xl shadow-sm flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
+                    <div class="flex gap-2">
+                        <input type="text" id="searchRoom" oninput="renderRooms()" placeholder="Tìm phòng (VD: B5-101)..." class="border rounded-lg px-2.5 py-1.5 text-xs flex-1 sm:w-48">
+                        <select id="filterRoomStatus" onchange="renderRooms()" class="border rounded-lg px-2.5 py-1.5 text-xs bg-white">
+                            <option value="ALL">Tất cả trạng thái</option>
+                            <option value="Còn trống">Còn trống</option>
+                            <option value="Đã đầy">Đã đầy</option>
+                            <option value="Đang bảo trì">Bảo trì</option>
+                        </select>
+                    </div>
+                    <button id="btnAddRoom" onclick="openRoomModal()" class="hust-red hover:bg-red-800 text-white text-xs px-3 py-1.5 rounded-lg font-semibold whitespace-nowrap">
+                        <i class="fas fa-plus mr-1"></i> Thêm phòng
+                    </button>
+                </div>
+                <div id="roomGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+            </section>
+
+            <!-- 4. YÊU CẦU SỬA CHỮA -->
+            <section id="sec-repairs" class="hidden space-y-4">
+                <div id="repairSubmitBox" class="bg-white p-3.5 md:p-4 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-2.5 text-xs md:text-sm">
+                        <i class="fas fa-wrench text-red-600 mr-1.5"></i>Báo hỏng thiết bị phòng (Kèm hình ảnh)
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-2 text-xs items-center">
+                        <select id="repRoom" class="border rounded-lg p-2"></select>
+                        <select id="repAsset" class="border rounded-lg p-2">
+                            <option value="Điều hòa">Điều hòa hỏng / không mát</option>
+                            <option value="Vòi sen / Nước">Vòi sen / Đường nước hỏng</option>
+                            <option value="Cửa phòng / Khóa">Khóa cửa / Cửa bị kẹt</option>
+                            <option value="Bóng đèn / Điện">Bóng đèn / Ổ cắm điện</option>
+                            <option value="Bình nóng lạnh">Bình nóng lạnh</option>
+                            <option value="Giường / Tủ">Giường tầng / Tủ đồ</option>
+                            <option value="Wifi / Mạng">Thiết bị Wifi</option>
+                        </select>
+                        <input type="text" id="repDesc" placeholder="Mô tả sự cố..." class="border rounded-lg p-2 sm:col-span-2 md:col-span-1">
+                        
+                        <div class="flex items-center space-x-2">
+                            <label class="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg px-2.5 py-2 text-xs font-semibold flex items-center space-x-1.5 w-full justify-center">
+                                <i class="fas fa-camera text-red-600"></i>
+                                <span id="repImgLabel" class="truncate">Chụp/Chọn ảnh</span>
+                                <input type="file" id="repImageInput" accept="image/*" onchange="previewRepairImage(event)" class="hidden">
+                            </label>
+                            <img id="repImgPreview" class="hidden w-9 h-9 object-cover rounded border border-red-400 flex-shrink-0" alt="Preview">
+                        </div>
+
+                        <button type="button" onclick="submitRepair()" class="hust-red hover:bg-red-800 text-white font-semibold rounded-lg py-2 px-3 text-xs sm:col-span-2 md:col-span-1">
+                            <i class="fas fa-paper-plane mr-1"></i> Gửi Yêu Cầu
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                    <div class="overflow-x-auto table-responsive">
+                        <table class="w-full text-left text-xs min-w-[640px]">
+                            <thead class="bg-gray-50 text-gray-600 uppercase text-[10px] border-b">
+                                <tr>
+                                    <th class="p-2.5">Mã YC</th>
+                                    <th class="p-2.5">Phòng</th>
+                                    <th class="p-2.5">Thiết bị</th>
+                                    <th class="p-2.5">Mô tả sự cố</th>
+                                    <th class="p-2.5 text-center">Hình ảnh</th>
+                                    <th class="p-2.5">Người báo</th>
+                                    <th class="p-2.5">Trạng thái</th>
+                                    <th class="p-2.5">Phản hồi</th>
+                                    <th class="p-2.5 text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="repairTableBody" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 5. PHẢN ÁNH / KHIẾU NẠI -->
+            <section id="sec-feedbacks" class="hidden space-y-4">
+                <div id="feedbackSubmitBox" class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-2 text-xs md:text-sm"><i class="fas fa-comment-medical text-red-600 mr-1.5"></i>Gửi phản ánh nội trú</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                        <input type="text" id="fbTitle" placeholder="Tiêu đề..." class="border rounded-lg p-2">
+                        <input type="text" id="fbContent" placeholder="Nội dung chi tiết..." class="border rounded-lg p-2">
+                        <button type="button" onclick="submitFeedback()" class="hust-red hover:bg-red-800 text-white font-semibold rounded-lg py-2 text-xs">
+                            <i class="fas fa-paper-plane mr-1"></i> Gửi Phản Ánh
+                        </button>
+                    </div>
+                </div>
+                <div id="feedbackList" class="space-y-2.5"></div>
+            </section>
+
+            <!-- 6. HÓA ĐƠN & THU PHÍ -->
+            <section id="sec-bills" class="hidden space-y-4">
+                <div id="managerBillForm" class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-2 text-xs md:text-sm"><i class="fas fa-plus-circle text-red-600 mr-1.5"></i>Lập hóa đơn thu phí</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-5 gap-2 text-xs">
+                        <select id="billRoom" class="border rounded-lg p-2"></select>
+                        <input type="text" id="billMonth" value="10/2026" placeholder="Kỳ" class="border rounded-lg p-2">
+                        <input type="number" id="billRoomFee" value="800000" placeholder="Tiền phòng" class="border rounded-lg p-2">
+                        <input type="number" id="billUtilFee" value="350000" placeholder="Điện nước" class="border rounded-lg p-2">
+                        <button type="button" onclick="createBill()" class="hust-red hover:bg-red-800 text-white font-semibold rounded-lg py-2 text-xs">
+                            Phát hành HĐ
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
+                    <div class="overflow-x-auto table-responsive">
+                        <table class="w-full text-left text-xs min-w-[580px]">
+                            <thead class="bg-gray-50 text-gray-600 uppercase text-[10px] border-b">
+                                <tr>
+                                    <th class="p-2.5">Mã HĐ</th>
+                                    <th class="p-2.5">Phòng</th>
+                                    <th class="p-2.5">Kỳ thu</th>
+                                    <th class="p-2.5">Tổng cộng</th>
+                                    <th class="p-2.5">Trạng thái</th>
+                                    <th id="thBillAction" class="p-2.5 text-right">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="billTableBody" class="divide-y"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 7. THÔNG BÁO KTX -->
+            <section id="sec-notices" class="hidden space-y-4">
+                <div id="managerNoticeForm" class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-gray-800 mb-2 text-xs md:text-sm"><i class="fas fa-bullhorn text-red-600 mr-1.5"></i>Đăng thông báo mới</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+                        <input type="text" id="noticeTitle" placeholder="Tiêu đề..." class="border rounded-lg p-2">
+                        <select id="noticeTarget" class="border rounded-lg p-2"></select>
+                        <input type="text" id="noticeContent" placeholder="Nội dung..." class="border rounded-lg p-2">
+                        <button type="button" onclick="postNotice()" class="hust-red hover:bg-red-800 text-white font-semibold rounded-lg py-2 text-xs">
+                            <i class="fas fa-paper-plane mr-1"></i> Đăng tin
+                        </button>
+                    </div>
+                </div>
+                <div id="noticeList" class="space-y-2.5"></div>
+            </section>
+        </main>
+
+        <!-- THANH MENU ĐÁY CHO ĐIỆN THOẠI -->
+        <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around items-center h-14 z-40 shadow-lg text-[9px] text-gray-500">
+            <button onclick="showSection('dashboard')" id="mnav-dashboard" class="flex-1 flex flex-col items-center justify-center py-1 mobile-tab-active">
+                <i class="fas fa-chart-pie text-base mb-0.5"></i><span>Tổng quan</span>
+            </button>
+            <button onclick="showSection('accounts')" id="mnav-accounts" class="flex-1 flex flex-col items-center justify-center py-1">
+                <i class="fas fa-users-cog text-base mb-0.5"></i><span id="mlabel-accounts">Tài khoản</span>
+            </button>
+            <button onclick="showSection('rooms')" id="mnav-rooms" class="flex-1 flex flex-col items-center justify-center py-1">
+                <i class="fas fa-door-open text-base mb-0.5"></i><span>Phòng</span>
+            </button>
+            <button onclick="showSection('repairs')" id="mnav-repairs" class="flex-1 flex flex-col items-center justify-center py-1">
+                <i class="fas fa-tools text-base mb-0.5"></i><span>Sửa chữa</span>
+            </button>
+            <button onclick="showSection('feedbacks')" id="mnav-feedbacks" class="flex-1 flex flex-col items-center justify-center py-1">
+                <i class="fas fa-comment-dots text-base mb-0.5"></i><span>Phản ánh</span>
+            </button>
+            <button onclick="showSection('bills')" id="mnav-bills" class="flex-1 flex flex-col items-center justify-center py-1">
+                <i class="fas fa-file-invoice-dollar text-base mb-0.5"></i><span>Hóa đơn</span>
+            </button>
+            <button onclick="showSection('notices')" id="mnav-notices" class="flex-1 flex flex-col items-center justify-center py-1">
+                <i class="fas fa-bullhorn text-base mb-0.5"></i><span>Bảng tin</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- ==================== MODAL THANH TOÁN VIETQR (CHỈ SINH VIÊN DÙNG) ==================== -->
+    <div id="vietqrModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl text-center max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 class="font-bold text-sm text-gray-800">
+                    <i class="fas fa-qrcode text-red-700 mr-1"></i>Thanh toán VietQR
+                </h3>
+                <button onclick="closeVietQRModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="bg-gray-50 p-2 rounded-xl border border-gray-200 mb-2.5">
+                <img id="vietqrImg" src="" alt="Mã VietQR" class="w-48 max-w-full mx-auto rounded-lg shadow-sm border bg-white p-1">
+            </div>
+
+            <div class="text-[11px] text-left bg-red-50 p-2.5 rounded-lg border border-red-100 space-y-1 text-gray-700 mb-3">
+                <p>🏦 <b>Ngân hàng:</b> MB Bank</p>
+                <p>💳 <b>Số TK:</b> <span class="font-mono font-bold text-red-700">0041106300306</span></p>
+                <p>💰 <b>Số tiền:</b> <span id="qrAmountText" class="font-bold text-red-700"></span></p>
+                <p>📝 <b>Nội dung:</b> <span id="qrContentText" class="font-mono font-bold text-blue-700 text-[10px] break-all"></span></p>
+            </div>
+
+            <div class="flex space-x-2">
+                <button onclick="closeVietQRModal()" class="w-1/3 py-2 border rounded-lg text-xs font-semibold hover:bg-gray-50">
+                    Đóng
+                </button>
+                <button id="btnConfirmPaid" onclick="confirmStudentPaid()" class="w-2/3 py-2 hust-red hover:bg-red-800 text-white rounded-lg text-xs font-bold shadow">
+                    <i class="fas fa-check-circle mr-1"></i>Đã chuyển tiền
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL XEM ẢNH SỰ CỐ PHÓNG TO ==================== -->
+    <div id="imgPreviewModal" onclick="closeImgModal()" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-3 cursor-pointer">
+        <div class="max-w-md w-full bg-white p-2.5 rounded-xl shadow-2xl text-center" onclick="event.stopPropagation()">
+            <div class="flex justify-between items-center mb-1.5 px-1">
+                <span id="imgModalCaption" class="font-bold text-xs text-gray-800 truncate max-w-[240px]">Ảnh hiện trạng sự cố</span>
+                <button onclick="closeImgModal()" class="text-gray-500 hover:text-red-600 p-1"><i class="fas fa-times"></i></button>
+            </div>
+            <img id="imgModalTarget" src="" class="max-h-[70vh] w-auto mx-auto rounded border" alt="Ảnh sự cố">
+        </div>
+    </div>
+
+    <!-- ==================== MODAL QUÊN MẬT KHẨU ==================== -->
+    <div id="forgotModal" class="fixed inset-0 bg-black/60 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b pb-2 mb-3">
+                <h3 class="font-bold text-sm text-gray-800">
+                    <i class="fas fa-envelope text-red-700 mr-1.5"></i>Khôi phục Mật khẩu
+                </h3>
+                <button onclick="closeForgotModal()" class="text-gray-400 hover:text-gray-600 p-1">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleForgotPassword(event)" class="space-y-3 text-xs">
+                <p class="text-gray-600 leading-relaxed text-[11px]">
+                    Nhập địa chỉ Email của bạn đã liên kết trên hệ thống KTX B5 để nhận lại mật khẩu đăng nhập.
+                </p>
+
+                <div id="forgotAlert" class="hidden p-2.5 rounded-lg text-xs font-medium"></div>
+
+                <div>
+                    <label class="block font-bold text-gray-700 uppercase mb-1">Email nhận mật khẩu *</label>
+                    <input type="email" id="forgotEmailInput" required placeholder="Nhập địa chỉ email..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-600">
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-1">
+                    <button type="button" onclick="closeForgotModal()" class="px-3 py-1.5 border rounded-lg text-xs font-medium hover:bg-gray-50">
+                        Đóng
+                    </button>
+                    <button type="submit" id="btnSendForgot" class="px-4 py-1.5 hust-red hover:bg-red-800 text-white rounded-lg text-xs font-bold shadow flex items-center space-x-1">
+                        <i class="fas fa-paper-plane"></i>
+                        <span>Gửi mật khẩu</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL THÊM / SỬA PHÒNG ==================== -->
+    <div id="roomModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-5 w-full max-w-sm shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 class="font-bold text-sm mb-3">Thêm / Cập nhật Phòng KTX B5</h3>
+            <div class="space-y-2.5 text-xs">
+                <input id="modRoomId" placeholder="Mã phòng (VD: B5-301)" class="w-full border rounded p-2">
+                <select id="modRoomType" class="w-full border rounded p-2">
+                    <option value="Phòng 4 người">Phòng 4 người</option>
+                    <option value="Phòng 6 người">Phòng 6 người</option>
+                    <option value="Phòng 8 người">Phòng 8 người</option>
+                </select>
+                <input id="modRoomCap" type="number" value="6" placeholder="Sức chứa tối đa" class="w-full border rounded p-2">
+                <select id="modRoomStatus" class="w-full border rounded p-2">
+                    <option value="Còn trống">Còn trống</option>
+                    <option value="Đã đầy">Đã đầy</option>
+                    <option value="Đang bảo trì">Đang bảo trì</option>
+                </select>
+                <textarea id="modRoomAssets" rows="3" placeholder="Danh mục thiết bị CSVC..." class="w-full border rounded p-2"></textarea>
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button onclick="closeRoomModal()" class="px-3 py-1.5 border rounded text-xs">Hủy</button>
+                <button onclick="saveRoom()" class="px-3 py-1.5 hust-red text-white rounded text-xs font-semibold">Lưu Phòng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL ĐỔI MẬT KHẨU ==================== -->
+    <div id="passModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-5 w-full max-w-xs shadow-xl">
+            <h3 class="font-bold text-sm mb-3"><i class="fas fa-key text-red-700 mr-1.5"></i>Đổi mật khẩu</h3>
+            <div class="space-y-2.5 text-xs">
+                <input type="password" id="oldPassInput" placeholder="Mật khẩu hiện tại..." class="w-full border rounded p-2">
+                <input type="password" id="newPassInput" placeholder="Mật khẩu mới..." class="w-full border rounded p-2">
+            </div>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button onclick="closeChangePassModal()" class="px-3 py-1.5 border rounded text-xs">Hủy</button>
+                <button onclick="saveNewPassword()" class="px-3 py-1.5 hust-red text-white rounded text-xs font-semibold">Cập nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const VIETQR_CONFIG = Object.freeze({
+            bankId: 'MB',
+            accountNo: '0041106300306',
+            accountName: 'BAN QUAN LY KTX B5 HUST'
+        });
+
+        const SECURE_SEED_MANAGER = Object.freeze({
+            username: 'quanly_b5',
+            passwordInit: 'AdminB5@2026',
+            email: 'huy.lv2414174@sis.hust.edu.vn',
+            name: 'Cô Quản lý Tòa nhà B5',
+            role: 'manager'
+        });
+
+        const defaultData = {
+            managerAccount: {
+                username: SECURE_SEED_MANAGER.username,
+                password: SECURE_SEED_MANAGER.passwordInit,
+                email: SECURE_SEED_MANAGER.email,
+                name: SECURE_SEED_MANAGER.name,
+                role: 'manager'
+            },
+            rooms: [
+                { id: 'B5-101', floor: 1, type: 'Phòng 6 người', capacity: 6, status: 'Còn trống', assets: '1 Điều hòa, 1 Bình nóng lạnh, 3 Giường tầng, 1 Wifi, 6 Tủ sắt' },
+                { id: 'B5-102', floor: 1, type: 'Phòng 4 người', capacity: 4, status: 'Còn trống', assets: '1 Điều hòa, 1 Bình nóng lạnh, 2 Giường tầng, 1 Wifi, 4 Tủ sắt' },
+                { id: 'B5-201', floor: 2, type: 'Phòng 8 người', capacity: 8, status: 'Còn trống', assets: '2 Quạt trần, 1 Bình nóng lạnh, 4 Giường tầng, 1 Wifi' },
+                { id: 'B5-202', floor: 2, type: 'Phòng 6 người', capacity: 6, status: 'Đang bảo trì', assets: 'Đang bảo dưỡng hệ thống ống nước & vòi sen' }
+            ],
+            students: [
+                { mssv: '202414174', name: 'Lê Văn Huy', email: 'huy.lv2414174@sis.hust.edu.vn', className: 'Điện tử 10-K69', room: 'B5-101', phone: '0988123456', username: '202414174', password: 'sv123456', status: 'Đang ở' },
+                { mssv: '202414138', name: 'Trần Thái Hợp', email: 'hop.tt2414138@sis.hust.edu.vn', className: 'Điện tử 10-K69', room: 'B5-101', phone: '0977654321', username: '202414138', password: 'sv123456', status: 'Đang ở' },
+                { mssv: '202415201', name: 'Nguyễn Minh Tuấn', email: 'tuan.nm2415201@sis.hust.edu.vn', className: 'Tự động hóa 02-K69', room: 'B5-102', phone: '0912333444', username: '202415201', password: 'sv123456', status: 'Đang ở' }
+            ],
+            repairs: [
+                { id: 'SC001', room: 'B5-101', asset: 'Vòi sen / Nước', desc: 'Vòi sen phòng tắm bị rò nước mạnh', image: '', reporter: 'Lê Văn Huy (202414174)', date: '14/10/2026', status: 'Đang xử lý', reply: 'Đã cử thợ kỹ thuật lên tầng 1 kiểm tra' },
+                { id: 'SC002', room: 'B5-102', asset: 'Điều hòa', desc: 'Điều hòa bật không mát, báo đèn nhấp nháy', image: '', reporter: 'Nguyễn Minh Tuấn (202415201)', date: '15/10/2026', status: 'Đang chờ', reply: 'Chưa phản hồi' }
+            ],
+            feedbacks: [
+                { id: 'PA01', student: 'Lê Văn Huy (202414174)', title: 'Đề xuất bổ sung thêm máy giặt tầng 1', content: 'Cuối tuần máy giặt khu B5 thường xuyên quá tải, mong BQL bổ sung thêm.', date: '12/10/2026', status: 'Đã giải quyết', response: 'BQL đã ghi nhận và lên kế hoạch lắp thêm 2 máy giặt vào tháng tới.' }
+            ],
+            bills: [
+                { id: 'HD1001', room: 'B5-101', month: '10/2026', roomFee: 900000, utilFee: 320000, status: 'Chưa thanh toán' },
+                { id: 'HD1002', room: 'B5-102', month: '10/2026', roomFee: 800000, utilFee: 280000, status: 'Chờ xác nhận' }
+            ],
+            notices: [
+                { id: 'TB01', title: 'Kiểm tra định kỳ hệ thống PCCC và Bình nóng lạnh tòa B5', target: 'Toàn bộ KTX B5', content: 'Ban quản lý tòa B5 phối hợp cùng bộ phận kỹ thuật kiểm tra thiết bị điện và PCCC tại tất cả các phòng vào 08:30 sáng Thứ Bảy.', date: '15/10/2026' }
+            ]
+        };
+
+        function compareRoomAsc(roomA, roomB) {
+            return String(roomA || '').localeCompare(String(roomB || ''), 'vi', { numeric: true, sensitivity: 'base' });
+        }
+
+        function sortAndSyncRoomsStudents(dataObj) {
+            if (!dataObj) return;
+
+            if (Array.isArray(dataObj.students)) {
+                dataObj.students.forEach(s => {
+                    const rm = String(s.room || 'B5-101').trim();
+                    if (rm && !dataObj.rooms.some(r => r.id.toLowerCase() === rm.toLowerCase())) {
+                        const floorGuess = rm.includes('-') && rm.split('-')[1] ? parseInt(rm.split('-')[1][0]) || 1 : 1;
+                        dataObj.rooms.push({
+                            id: rm,
+                            floor: floorGuess,
+                            type: 'Phòng 6 người',
+                            capacity: 6,
+                            status: 'Còn trống',
+                            assets: '1 Điều hòa, 1 Bình nóng lạnh, 3 Giường tầng, 1 Wifi, 6 Tủ sắt'
+                        });
+                    }
+                });
+            }
+
+            if (Array.isArray(dataObj.rooms)) {
+                dataObj.rooms.sort((a, b) => compareRoomAsc(a.id, b.id));
+                dataObj.rooms.forEach(r => {
+                    if (r.status !== 'Đang bảo trì') {
+                        const count = dataObj.students.filter(s => s.room === r.id && s.status === 'Đang ở').length;
+                        r.status = count >= (r.capacity || 6) ? 'Đã đầy' : 'Còn trống';
+                    }
+                });
+            }
+
+            if (Array.isArray(dataObj.students)) {
+                dataObj.students.sort((a, b) => {
+                    const cmpRoom = compareRoomAsc(a.room, b.room);
+                    if (cmpRoom !== 0) return cmpRoom;
+                    return String(a.mssv || '').localeCompare(String(b.mssv || ''), 'vi', { numeric: true });
+                });
+            }
+        }
+
+        function loadAndSanitizeDB() {
+            try {
+                const raw = localStorage.getItem('KTX_B5_SECURE_DB');
+                if (!raw) {
+                    const fresh = JSON.parse(JSON.stringify(defaultData));
+                    sortAndSyncRoomsStudents(fresh);
+                    return fresh;
+                }
+                const parsed = JSON.parse(raw);
+                const clean = {
+                    managerAccount: (parsed.managerAccount && parsed.managerAccount.username) ? parsed.managerAccount : { ...defaultData.managerAccount },
+                    rooms: Array.isArray(parsed.rooms) ? parsed.rooms : [...defaultData.rooms],
+                    students: Array.isArray(parsed.students) ? parsed.students : [...defaultData.students],
+                    repairs: Array.isArray(parsed.repairs) ? parsed.repairs : [...defaultData.repairs],
+                    feedbacks: Array.isArray(parsed.feedbacks) ? parsed.feedbacks : [...defaultData.feedbacks],
+                    bills: Array.isArray(parsed.bills) ? parsed.bills : [...defaultData.bills],
+                    notices: Array.isArray(parsed.notices) ? parsed.notices : [...defaultData.notices]
+                };
+                clean.managerAccount.email = SECURE_SEED_MANAGER.email;
+                sortAndSyncRoomsStudents(clean);
+                return clean;
+            } catch (e) {
+                const fallback = JSON.parse(JSON.stringify(defaultData));
+                sortAndSyncRoomsStudents(fallback);
+                return fallback;
+            }
+        }
+
+        let db = loadAndSanitizeDB();
+        let currentUser = null;
+        let visiblePasswords = {};
+        let currentRepairImageBase64 = '';
+        let activeBillIdForQR = null;
+        let roomChartInstance = null;
+        let repairChartInstance = null;
+
+        function saveDB() {
+            sortAndSyncRoomsStudents(db);
+            try {
+                localStorage.setItem('KTX_B5_SECURE_DB', JSON.stringify(db));
+            } catch (err) {
+                alert('Bộ nhớ trình duyệt đã đầy!');
+            }
+            if (currentUser) renderAll();
+        }
+
+        // ============================================================================
+        // TẢI FILE MẪU & IMPORT EXCEL TỰ ĐỘNG
+        // ============================================================================
+        function downloadExcelTemplate() {
+            const sampleData = [
+                { "MSSV": "202415888", "HoTen": "Đỗ Hoàng Long", "LopKhoa": "Điện tử 05-K69", "MaPhong": "B5-101", "SDT": "0988111222", "Email": "long.dh2415888@sis.hust.edu.vn", "TenDangNhap": "202415888", "MatKhau": "sv123456" },
+                { "MSSV": "202415999", "HoTen": "Trần Quỳnh Nga", "LopKhoa": "Vật lý Kỹ thuật 02-K69", "MaPhong": "B5-102", "SDT": "0977333444", "Email": "nga.tq2415999@sis.hust.edu.vn", "TenDangNhap": "202415999", "MatKhau": "sv123456" },
+                { "MSSV": "202414174", "HoTen": "Lê Văn Huy", "LopKhoa": "Điện tử 10-K69", "MaPhong": "B5-101", "SDT": "0988123456", "Email": "huy.lv2414174@sis.hust.edu.vn", "TenDangNhap": "202414174", "MatKhau": "sv123456" }
+            ];
+
+            if (typeof XLSX !== 'undefined') {
+                const ws = XLSX.utils.json_to_sheet(sampleData);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "DanhSachSinhVien");
+                XLSX.writeFile(wb, "Mau_Nhap_SinhVien_KTX_B5.xlsx");
+            } else {
+                let csv = '\uFEFFMSSV,HoTen,LopKhoa,MaPhong,SDT,Email,TenDangNhap,MatKhau\n';
+                sampleData.forEach(r => {
+                    csv += `"${r.MSSV}","${r.HoTen}","${r.LopKhoa}","${r.MaPhong}","${r.SDT}","${r.Email}","${r.TenDangNhap}","${r.MatKhau}"\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'Mau_Nhap_SinhVien_KTX_B5.csv';
+                link.click();
+            }
+        }
+
+        function processImportedRows(rows) {
+            if (!rows || rows.length === 0) {
+                alert("File trống hoặc không có dòng dữ liệu hợp lệ!");
+                return;
+            }
+            let insertedCount = 0;
+            let updatedCount = 0;
+
+            rows.forEach(row => {
+                const mssv = String(row["MSSV"] || row["mssv"] || row["Mã số SV"] || row["MaSoSV"] || "").trim();
+                if (!mssv) return;
+
+                const name = String(row["HoTen"] || row["Họ và tên"] || row["ho_ten"] || row["Name"] || "").trim() || `Sinh viên ${mssv}`;
+                const className = String(row["LopKhoa"] || row["Lớp"] || row["Lop"] || row["Khoa"] || "K69 - HUST").trim();
+                const room = String(row["MaPhong"] || row["Phòng"] || row["Phong"] || "B5-101").trim();
+                const phone = String(row["SDT"] || row["Số điện thoại"] || row["Phone"] || "Chưa cập nhật").trim();
+                const email = String(row["Email"] || row["email"] || `${mssv}@sis.hust.edu.vn`).trim();
+                const username = String(row["TenDangNhap"] || row["Tên đăng nhập"] || row["Username"] || mssv).trim();
+                const password = String(row["MatKhau"] || row["Mật khẩu"] || row["Password"] || "sv123456").trim();
+
+                const existingIdx = db.students.findIndex(s => s.mssv === mssv || s.username === username);
+                if (existingIdx >= 0) {
+                    db.students[existingIdx].name = name;
+                    db.students[existingIdx].className = className;
+                    db.students[existingIdx].room = room;
+                    db.students[existingIdx].phone = phone;
+                    db.students[existingIdx].email = email;
+                    if (password) db.students[existingIdx].password = password;
+                    updatedCount++;
+                } else {
+                    db.students.push({
+                        mssv, name, className, room, phone, email,
+                        username, password,
+                        status: 'Đang ở'
+                    });
+                    insertedCount++;
+                }
+            });
+
+            saveDB();
+            alert(`✅ CẬP NHẬT TỪ FILE EXCEL THÀNH CÔNG!\n• Thêm mới: ${insertedCount} sinh viên\n• Cập nhật: ${updatedCount} sinh viên\n• Đã tự động sắp xếp các phòng theo thứ tự tăng dần.`);
+        }
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (typeof XLSX !== 'undefined') {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const data = new Uint8Array(evt.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "" });
+                        processImportedRows(rows);
+                    } catch (err) {
+                        alert("Không thể đọc file! Hãy kiểm tra lại định dạng file (.xlsx, .xls, .csv).");
+                    } finally {
+                        e.target.value = "";
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    try {
+                        const text = evt.target.result;
+                        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+                        if (lines.length < 2) return alert("File không có dữ liệu!");
+                        const headers = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+                        const rows = [];
+                        for (let i = 1; i < lines.length; i++) {
+                            const vals = lines[i].split(',').map(v => v.replace(/^"|"$/g, '').trim());
+                            const obj = {};
+                            headers.forEach((h, idx) => { obj[h] = vals[idx] || ""; });
+                            rows.push(obj);
+                        }
+                        processImportedRows(rows);
+                    } catch (err) {
+                        alert("Lỗi đọc file CSV!");
+                    } finally {
+                        e.target.value = "";
+                    }
+                };
+                reader.readAsText(file, 'UTF-8');
+            }
+        }
+
+        function exportExcelStudents() {
+            if (!db.students || db.students.length === 0) return alert('Chưa có dữ liệu sinh viên!');
+            sortAndSyncRoomsStudents(db);
+            const dataToExport = db.students.map(s => ({
+                "MSSV": s.mssv,
+                "HoTen": s.name,
+                "LopKhoa": s.className,
+                "MaPhong": s.room,
+                "SDT": s.phone,
+                "Email": s.email || '',
+                "TenDangNhap": s.username,
+                "MatKhau": s.password,
+                "TrangThai": s.status
+            }));
+
+            if (typeof XLSX !== 'undefined') {
+                const ws = XLSX.utils.json_to_sheet(dataToExport);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "DanhSachSinhVien");
+                XLSX.writeFile(wb, "Danh_Sach_Sinh_Vien_KTX_B5.xlsx");
+            } else {
+                let csv = '\uFEFFMSSV,HoTen,LopKhoa,MaPhong,SDT,Email,TenDangNhap,MatKhau,TrangThai\n';
+                dataToExport.forEach(s => {
+                    csv += `"${s.MSSV}","${s.HoTen}","${s.LopKhoa}","${s.MaPhong}","${s.SDT}","${s.Email}","${s.TenDangNhap}","${s.MatKhau}","${s.TrangThai}"\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'Danh_Sach_Sinh_Vien_KTX_B5.csv';
+                link.click();
+            }
+        }
+
+        // ============================================================================
+        // VIETQR & BÁO HỎNG
+        // ============================================================================
+        function openVietQRModal(billId) {
+            const b = db.bills.find(x => x.id === billId);
+            if (!b) return;
+            activeBillIdForQR = billId;
+
+            const totalAmount = b.roomFee + b.utilFee;
+            const transferInfo = `KTX B5 ${b.room} ${b.id} T${b.month.replace('/', '')}`;
+            const qrUrl = `https://img.vietqr.io/image/${VIETQR_CONFIG.bankId}-${VIETQR_CONFIG.accountNo}-compact2.png?amount=${totalAmount}&addInfo=${encodeURIComponent(transferInfo)}&accountName=${encodeURIComponent(VIETQR_CONFIG.accountName)}`;
+
+            document.getElementById('vietqrImg').src = qrUrl;
+            document.getElementById('qrAmountText').innerText = `${totalAmount.toLocaleString('vi-VN')} VNĐ`;
+            document.getElementById('qrContentText').innerText = transferInfo;
+
+            const btnConfirm = document.getElementById('btnConfirmPaid');
+            btnConfirm.classList.toggle('hidden', b.status !== 'Chưa thanh toán');
+
+            document.getElementById('vietqrModal').classList.remove('hidden');
+            document.getElementById('vietqrModal').classList.add('flex');
+        }
+
+        function closeVietQRModal() {
+            activeBillIdForQR = null;
+            document.getElementById('vietqrModal').classList.add('hidden');
+            document.getElementById('vietqrModal').classList.remove('flex');
+        }
+
+        function confirmStudentPaid() {
+            if (!activeBillIdForQR) return;
+            const b = db.bills.find(x => x.id === activeBillIdForQR);
+            if (b) {
+                b.status = 'Chờ xác nhận';
+                saveDB();
+                closeVietQRModal();
+                alert('Đã gửi xác nhận thanh toán tới Cô quản lý B5!');
+            }
+        }
+
+        function previewRepairImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 500;
+                    let w = img.width, h = img.height;
+                    if (w > maxSize) { h = Math.round((h * maxSize) / w); w = maxSize; }
+                    canvas.width = w;
+                    canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    currentRepairImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+                    const preview = document.getElementById('repImgPreview');
+                    preview.src = currentRepairImageBase64;
+                    preview.classList.remove('hidden');
+                    document.getElementById('repImgLabel').innerText = 'Đã chọn';
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function openImgModal(src, caption) {
+            document.getElementById('imgModalTarget').src = src;
+            document.getElementById('imgModalCaption').innerText = caption || 'Ảnh sự cố CSVC';
+            document.getElementById('imgPreviewModal').classList.remove('hidden');
+            document.getElementById('imgPreviewModal').classList.add('flex');
+        }
+
+        function closeImgModal() {
+            document.getElementById('imgPreviewModal').classList.add('hidden');
+            document.getElementById('imgPreviewModal').classList.remove('flex');
+        }
+
+        function openForgotModal() {
+            document.getElementById('forgotEmailInput').value = '';
+            document.getElementById('forgotAlert').classList.add('hidden');
+            document.getElementById('forgotModal').classList.remove('hidden');
+            document.getElementById('forgotModal').classList.add('flex');
+        }
+
+        function closeForgotModal() {
+            document.getElementById('forgotModal').classList.add('hidden');
+            document.getElementById('forgotModal').classList.remove('flex');
+        }
+
+        async function handleForgotPassword(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('forgotEmailInput').value.trim().toLowerCase();
+            const alertBox = document.getElementById('forgotAlert');
+            const btn = document.getElementById('btnSendForgot');
+
+            let matchedAccounts = [];
+            if (db.managerAccount.email.toLowerCase() === emailInput) {
+                matchedAccounts.push({
+                    roleName: 'Cô Quản lý Tòa nhà B5',
+                    username: db.managerAccount.username,
+                    password: db.managerAccount.password
+                });
+            }
+
+            db.students.forEach(s => {
+                if ((s.email || '').toLowerCase() === emailInput) {
+                    matchedAccounts.push({
+                        roleName: `Sinh viên ${s.name} (Phòng ${s.room})`,
+                        username: s.username,
+                        password: s.password
+                    });
+                }
+            });
+
+            if (matchedAccounts.length === 0) {
+                alertBox.className = 'p-2.5 rounded-lg text-xs font-medium bg-red-50 border border-red-300 text-red-700';
+                alertBox.innerHTML = `<i class="fas fa-exclamation-triangle mr-1"></i> Không tìm thấy tài khoản nào gắn với email này!`;
+                alertBox.classList.remove('hidden');
+                return;
+            }
+
+            const subject = '[KTX B5 - HUST] Khôi phục mật khẩu';
+            const accountDetails = matchedAccounts.map(acc =>
+                `- ${acc.roleName}\n  Tên đăng nhập: ${acc.username}\n  Mật khẩu: ${acc.password}`
+            ).join('\n\n');
+
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span>Đang gửi...</span>`;
+            try {
+                await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(emailInput)}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        _subject: subject,
+                        He_Thong: 'Quản lý KTX B5 - HUST',
+                        Thong_Tin_Tai_Khoan: accountDetails,
+                        _template: 'table'
+                    })
+                });
+                alertBox.className = 'p-2.5 rounded-lg text-xs font-medium bg-green-50 border border-green-300 text-green-800';
+                alertBox.innerHTML = `<i class="fas fa-check-circle mr-1"></i> Đã gửi mật khẩu về email của bạn!`;
+                alertBox.classList.remove('hidden');
+            } catch (err) {
+                alertBox.className = 'p-2.5 rounded-lg text-xs font-medium bg-amber-50 border border-amber-300 text-amber-800';
+                alertBox.innerHTML = `Đã kết nối gửi thông tin về email.`;
+                alertBox.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<span>Gửi mật khẩu</span>`;
+            }
+        }
+
+        function toggleLoginPass() {
+            const inp = document.getElementById('loginPassword');
+            const icon = document.getElementById('eyeIcon');
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                inp.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('loginUsername').value.trim();
+            const p = document.getElementById('loginPassword').value;
+            const errBox = document.getElementById('loginError');
+
+            if (u === db.managerAccount.username && p === db.managerAccount.password) {
+                currentUser = {
+                    username: db.managerAccount.username,
+                    name: db.managerAccount.name,
+                    email: db.managerAccount.email,
+                    role: 'manager'
+                };
+                enterApp();
+                return;
+            }
+
+            const stu = db.students.find(s => s.username === u && s.password === p);
+            if (stu) {
+                currentUser = {
+                    username: stu.username,
+                    mssv: stu.mssv,
+                    name: stu.name,
+                    email: stu.email,
+                    room: stu.room,
+                    role: 'student'
+                };
+                enterApp();
+                return;
+            }
+
+            errBox.innerText = 'Tên đăng nhập hoặc mật khẩu không đúng!';
+            errBox.classList.remove('hidden');
+        }
+
+        function enterApp() {
+            document.getElementById('loginError').classList.add('hidden');
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('appScreen').classList.remove('hidden');
+
+            const isManager = currentUser.role === 'manager';
+            document.getElementById('currentUserName').innerText = currentUser.name;
+            document.getElementById('currentUserSub').innerText = isManager
+                ? 'Ban Quản trị KTX B5'
+                : `MSSV: ${currentUser.mssv} • P.${currentUser.room}`;
+            document.getElementById('mobUserName').innerText = currentUser.name;
+            document.getElementById('mobUserRole').innerText = isManager ? 'Cán bộ Quản lý' : `SV Phòng ${currentUser.room}`;
+
+            document.getElementById('roleSubText').innerText = isManager
+                ? 'Khu nội trú B5 – Đại học Bách Khoa Hà Nội'
+                : `Sinh viên nội trú phòng ${currentUser.room} – KTX B5`;
+
+            document.getElementById('badgeRole').innerText = isManager ? 'QUẢN LÝ B5' : 'SINH VIÊN';
+            document.getElementById('badgeRole').className = isManager
+                ? 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-700'
+                : 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-700';
+
+            // ẨN "TỔNG QUAN & THỐNG KÊ" VÀ "PHÒNG & CƠ SỞ VẬT CHẤT" BÊN TÀI KHOẢN SINH VIÊN
+            document.getElementById('nav-dashboard').classList.toggle('hidden', !isManager);
+            document.getElementById('mnav-dashboard').classList.toggle('hidden', !isManager);
+            document.getElementById('nav-rooms').classList.toggle('hidden', !isManager);
+            document.getElementById('mnav-rooms').classList.toggle('hidden', !isManager);
+
+            document.getElementById('label-accounts').innerText = isManager ? 'Quản lý Tài khoản & SV' : 'Hồ sơ Cá nhân & Trả phòng';
+            document.getElementById('mlabel-accounts').innerText = isManager ? 'Tài khoản' : 'Hồ sơ';
+            document.getElementById('label-bills').innerText = isManager ? 'Hóa đơn & Thu phí' : 'Hóa đơn & Thanh toán';
+            document.getElementById('thBillAction').innerText = isManager ? 'Xét duyệt / Thao tác' : 'Thanh toán QR';
+
+            document.getElementById('managerAccountPanel').classList.toggle('hidden', !isManager);
+            document.getElementById('studentProfilePanel').classList.toggle('hidden', isManager);
+            document.getElementById('btnAddRoom').classList.toggle('hidden', !isManager);
+            document.getElementById('managerBillForm').classList.toggle('hidden', !isManager);
+            document.getElementById('managerNoticeForm').classList.toggle('hidden', !isManager);
+            document.getElementById('btnExportCSV').classList.toggle('hidden', !isManager);
+            document.getElementById('btnResetDemo').classList.toggle('hidden', !isManager);
+
+            document.getElementById('repairSubmitBox').classList.toggle('hidden', isManager);
+            document.getElementById('feedbackSubmitBox').classList.toggle('hidden', isManager);
+
+            // Nếu là Quản lý thì mở Tổng quan, nếu là Sinh viên thì mở thẳng Hồ sơ Cá nhân
+            showSection(isManager ? 'dashboard' : 'accounts');
+            renderAll();
+        }
+
+        function logout() {
+            currentUser = null;
+            visiblePasswords = {};
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            document.getElementById('appScreen').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function openChangePassModal() {
+            document.getElementById('oldPassInput').value = '';
+            document.getElementById('newPassInput').value = '';
+            document.getElementById('passModal').classList.remove('hidden');
+            document.getElementById('passModal').classList.add('flex');
+        }
+        function closeChangePassModal() {
+            document.getElementById('passModal').classList.add('hidden');
+            document.getElementById('passModal').classList.remove('flex');
+        }
+        function saveNewPassword() {
+            const oldP = document.getElementById('oldPassInput').value;
+            const newP = document.getElementById('newPassInput').value.trim();
+            if (!newP || newP.length < 4) return alert('Mật khẩu mới phải có ít nhất 4 ký tự!');
+
+            if (currentUser.role === 'manager') {
+                if (oldP !== db.managerAccount.password) return alert('Mật khẩu hiện tại không đúng!');
+                db.managerAccount.password = newP;
+            } else {
+                const stu = db.students.find(s => s.username === currentUser.username);
+                if (!stu || oldP !== stu.password) return alert('Mật khẩu hiện tại không đúng!');
+                stu.password = newP;
+            }
+            saveDB();
+            closeChangePassModal();
+            alert('Đã đổi mật khẩu thành công!');
+        }
+
+        function showSection(sec) {
+            const isManager = currentUser && currentUser.role === 'manager';
+            // Ngăn sinh viên mở tab Tổng quan hoặc Phòng
+            if (!isManager && (sec === 'dashboard' || sec === 'rooms')) {
+                sec = 'accounts';
+            }
+
+            const sections = ['dashboard', 'accounts', 'rooms', 'repairs', 'feedbacks', 'bills', 'notices'];
+            const titles = {
+                dashboard: 'Tổng quan & Thống kê KTX B5',
+                accounts: isManager ? 'Quản lý Tài khoản & Sinh viên (Nhập Excel / Thủ công)' : 'Hồ sơ Cá nhân & Đăng ký Trả phòng',
+                rooms: 'Quản lý & Tra cứu Phòng (Thứ tự tăng dần)',
+                repairs: isManager ? 'Tiếp nhận & Xử lý Yêu cầu Sửa chữa' : 'Báo hỏng & Sửa chữa CSVC',
+                feedbacks: isManager ? 'Tiếp nhận Phản ánh Nội trú' : 'Gửi Phản ánh / Khiếu nại',
+                bills: isManager ? 'Quản lý Hóa đơn & Duyệt Thu phí' : 'Hóa đơn & Thanh toán VietQR',
+                notices: 'Bảng tin & Thông báo KTX B5'
+            };
+
+            sections.forEach(s => {
+                const el = document.getElementById('sec-' + s);
+                if (el) el.classList.add('hidden');
+
+                const dNav = document.getElementById('nav-' + s);
+                if (dNav) dNav.classList.remove('tab-active');
+
+                const mNav = document.getElementById('mnav-' + s);
+                if (mNav) mNav.classList.remove('mobile-tab-active');
+            });
+
+            const activeSec = document.getElementById('sec-' + sec);
+            if (activeSec) activeSec.classList.remove('hidden');
+
+            const activeD = document.getElementById('nav-' + sec);
+            if (activeD) activeD.classList.add('tab-active');
+
+            const activeM = document.getElementById('mnav-' + sec);
+            if (activeM) activeM.classList.add('mobile-tab-active');
+
+            document.getElementById('pageTitle').innerText = titles[sec];
+            const mainArea = document.getElementById('mainScrollArea');
+            if (mainArea) mainArea.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function syncUsernameFromMSSV() {
+            document.getElementById('accUsername').value = document.getElementById('accMSSV').value.trim();
+        }
+        function generateRandomPass() {
+            document.getElementById('accPassword').value = 'sv' + Math.floor(100000 + Math.random() * 900000);
+        }
+        function toggleRowPassword(username) {
+            visiblePasswords[username] = !visiblePasswords[username];
+            renderAccounts();
+        }
+
+        function createStudentAccount() {
+            if (currentUser.role !== 'manager') return;
+            const mssv = document.getElementById('accMSSV').value.trim();
+            const name = document.getElementById('accName').value.trim();
+            const email = document.getElementById('accEmail').value.trim() || `${mssv}@sis.hust.edu.vn`;
+            const className = document.getElementById('accClass').value.trim() || 'K69 - HUST';
+            const phone = document.getElementById('accPhone').value.trim() || 'Chưa cập nhật';
+            const room = document.getElementById('accRoom').value;
+            const username = document.getElementById('accUsername').value.trim();
+            const password = document.getElementById('accPassword').value.trim();
+
+            if (!mssv || !name || !username || !password) {
+                return alert('Vui lòng nhập đầy đủ MSSV, Họ tên, Tên đăng nhập và Mật khẩu!');
+            }
+            if (username === db.managerAccount.username || db.students.some(s => s.username === username)) {
+                return alert('Tên đăng nhập này đã tồn tại!');
+            }
+            if (db.students.some(s => s.mssv === mssv)) {
+                return alert('Mã số sinh viên (MSSV) này đã có tài khoản!');
+            }
+
+            db.students.push({
+                mssv, name, email, className, room, phone,
+                username, password,
+                status: 'Đang ở'
+            });
+
+            document.getElementById('accMSSV').value = '';
+            document.getElementById('accName').value = '';
+            document.getElementById('accEmail').value = '';
+            document.getElementById('accClass').value = '';
+            document.getElementById('accPhone').value = '';
+            document.getElementById('accUsername').value = '';
+            generateRandomPass();
+
+            saveDB();
+            alert(`Đã tạo tài khoản thành công cho SV ${name} (Phòng ${room})!`);
+        }
+
+        function renderAccounts() {
+            sortAndSyncRoomsStudents(db);
+
+            const roomOptions = db.rooms.map(r => `<option value="${r.id}">${r.id} (${r.status})</option>`).join('');
+            document.getElementById('accRoom').innerHTML = roomOptions;
+            document.getElementById('billRoom').innerHTML = db.rooms.map(r => `<option value="${r.id}">${r.id}</option>`).join('');
+            document.getElementById('noticeTarget').innerHTML = `<option value="Toàn bộ KTX B5">Toàn bộ KTX B5</option>` + db.rooms.map(r => `<option value="Phòng ${r.id}">Phòng ${r.id}</option>`).join('');
+
+            const filterRoomEl = document.getElementById('filterAccountRoom');
+            if (filterRoomEl) {
+                const currentSelectedRoom = filterRoomEl.value || 'ALL';
+                filterRoomEl.innerHTML = `<option value="ALL">Tất cả phòng (${db.rooms.length} phòng)</option>` +
+                    db.rooms.map(r => {
+                        const cnt = db.students.filter(s => s.room === r.id).length;
+                        return `<option value="${r.id}">Phòng ${r.id} (${cnt} SV)</option>`;
+                    }).join('');
+                if ([...filterRoomEl.options].some(o => o.value === currentSelectedRoom)) {
+                    filterRoomEl.value = currentSelectedRoom;
+                }
+            }
+
+            const lblBadge = document.getElementById('lblTotalStudentsBadge');
+            if (lblBadge) lblBadge.innerText = db.students.length;
+
+            if (currentUser.role === 'student') {
+                document.getElementById('repRoom').innerHTML = `<option value="${currentUser.room}">Phòng ${currentUser.room}</option>`;
+                const me = db.students.find(s => s.username === currentUser.username);
+                if (me) {
+                    document.getElementById('profUsername').value = me.username;
+                    document.getElementById('profMSSV').value = me.mssv;
+                    document.getElementById('profName').value = me.name;
+                    document.getElementById('profEmail').value = me.email || '';
+                    document.getElementById('profClass').value = me.className;
+                    document.getElementById('profPhone').value = me.phone;
+                    document.getElementById('profRoom').value = me.room;
+                    document.getElementById('profStatus').value = me.status;
+                }
+                return;
+            } else {
+                document.getElementById('repRoom').innerHTML = db.rooms.map(r => `<option value="${r.id}">Phòng ${r.id}</option>`).join('');
+            }
+
+            const q = (document.getElementById('searchAccount').value || '').toLowerCase();
+            const roomFilter = filterRoomEl ? filterRoomEl.value : 'ALL';
+            const sortMode = document.getElementById('sortAccountMode') ? document.getElementById('sortAccountMode').value : 'ROOM_ASC';
+
+            let filtered = db.students.filter(s => {
+                const matchRoom = (roomFilter === 'ALL' || s.room === roomFilter);
+                const matchText = (s.mssv || '').toLowerCase().includes(q) ||
+                                  (s.name || '').toLowerCase().includes(q) ||
+                                  (s.username || '').toLowerCase().includes(q) ||
+                                  (s.room || '').toLowerCase().includes(q) ||
+                                  (s.className || '').toLowerCase().includes(q);
+                return matchRoom && matchText;
+            });
+
+            filtered.sort((a, b) => {
+                if (sortMode === 'MSSV_ASC') {
+                    return String(a.mssv || '').localeCompare(String(b.mssv || ''), 'vi', { numeric: true });
+                }
+                if (sortMode === 'NAME_ASC') {
+                    return String(a.name || '').localeCompare(String(b.name || ''), 'vi');
+                }
+                const cmpR = compareRoomAsc(a.room, b.room);
+                if (cmpR !== 0) return cmpR;
+                return String(a.mssv || '').localeCompare(String(b.mssv || ''), 'vi', { numeric: true });
+            });
+
+            const tbody = document.getElementById('accountTableBody');
+            tbody.innerHTML = '';
+
+            filtered.forEach((s, index) => {
+                const stColor = s.status === 'Đang ở' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
+                const isShown = !!visiblePasswords[s.username];
+                const displayPass = isShown ? s.password : '••••••';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-red-50/40 transition">
+                        <td class="p-2.5 text-gray-400 font-semibold">${index + 1}</td>
+                        <td class="p-2.5 font-bold text-gray-800">${s.mssv}</td>
+                        <td class="p-2.5 font-medium">${s.name}</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded bg-red-50 border border-red-200 font-bold text-red-700">${s.room}</span></td>
+                        <td class="p-2.5 text-gray-500">${s.className || ''}<br><span class="text-[10px] text-gray-400">${s.phone || ''}</span></td>
+                        <td class="p-2.5 font-mono text-[11px] font-bold text-blue-700">${s.username}</td>
+                        <td class="p-2.5 font-mono text-[11px] whitespace-nowrap">
+                            <span class="bg-gray-100 px-1.5 py-0.5 rounded border">${displayPass}</span>
+                            <button onclick="toggleRowPassword('${s.username}')" class="ml-1 text-gray-500 hover:text-gray-800 p-0.5">
+                                <i class="fas ${isShown ? 'fa-eye-slash' : 'fa-eye'}"></i>
+                            </button>
+                        </td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${stColor}">${s.status}</span></td>
+                        <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
+                            <button onclick="changeStudentRoom('${s.username}')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-[11px]">Phòng</button>
+                            <button onclick="resetStudentPassword('${s.username}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-[11px]">Đổi MK</button>
+                            <button onclick="deleteStudentAccount('${s.username}')" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-[11px]">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function resetStudentPassword(username) {
+            if (currentUser.role !== 'manager') return;
+            const stu = db.students.find(s => s.username === username);
+            if (!stu) return;
+            const newPass = prompt(`Cập nhật Mật khẩu mới cho SV ${stu.name} (Tên ĐN: ${stu.username}):`, stu.password);
+            if (!newPass) return;
+
+            stu.password = newPass.trim();
+            saveDB();
+            alert(`Đã cập nhật mật khẩu cho SV ${stu.name}!`);
+        }
+
+        function changeStudentRoom(username) {
+            if (currentUser.role !== 'manager') return;
+            const stu = db.students.find(s => s.username === username);
+            if (!stu) return;
+            const newRoom = prompt(`Nhập mã phòng mới cho SV ${stu.name}:`, stu.room);
+            if (newRoom && newRoom.trim()) {
+                stu.room = newRoom.trim();
+                saveDB();
+            }
+        }
+
+        function deleteStudentAccount(username) {
+            if (currentUser.role !== 'manager') return;
+            const stu = db.students.find(s => s.username === username);
+            if (!stu) return;
+            if (confirm(`Xóa tài khoản của sinh viên ${stu.name} (${stu.mssv})?`)) {
+                db.students = db.students.filter(s => s.username !== username);
+                saveDB();
+            }
+        }
+
+        function saveMyProfile() {
+            const me = db.students.find(s => s.username === currentUser.username);
+            if (!me) return;
+            me.name = document.getElementById('profName').value.trim() || me.name;
+            me.email = document.getElementById('profEmail').value.trim() || me.email;
+            me.className = document.getElementById('profClass').value.trim();
+            me.phone = document.getElementById('profPhone').value.trim();
+            currentUser.name = me.name;
+            saveDB();
+            alert('Đã cập nhật thông tin cá nhân!');
+        }
+
+        function requestCheckout() {
+            const me = db.students.find(s => s.username === currentUser.username);
+            if (!me) return;
+            me.status = 'Chờ duyệt trả phòng';
+            saveDB();
+            alert('Đã gửi yêu cầu trả phòng tới Cô quản lý!');
+        }
+
+        function renderDashboard() {
+            if (!currentUser || currentUser.role !== 'manager') return;
+
+            const emptyRooms = db.rooms.filter(r => r.status === 'Còn trống').length;
+            const activeStudents = db.students.filter(s => s.status === 'Đang ở').length;
+            const pendingRepairs = db.repairs.filter(r => r.status !== 'Đã hoàn thành').length;
+            const unpaidBills = db.bills.filter(b => b.status !== 'Đã thanh toán').length;
+            const paidAmount = db.bills.filter(b => b.status === 'Đã thanh toán').reduce((sum, b) => sum + b.roomFee + b.utilFee, 0);
+
+            document.getElementById('statTotalRooms').innerText = db.rooms.length;
+            document.getElementById('statEmptyRooms').innerText = `${emptyRooms} phòng còn chỗ`;
+            document.getElementById('statTotalStudents').innerText = db.students.length;
+            document.getElementById('statActiveStudents').innerText = `${activeStudents} đang ở`;
+            document.getElementById('statPendingRepairs').innerText = pendingRepairs;
+            document.getElementById('statUnpaidBills').innerText = unpaidBills;
+            document.getElementById('statRevenue').innerText = `Đã thu: ${paidAmount.toLocaleString('vi-VN')} đ`;
+
+            if (typeof Chart === 'undefined') return;
+
+            const roomCounts = [
+                db.rooms.filter(r => r.status === 'Còn trống').length,
+                db.rooms.filter(r => r.status === 'Đã đầy').length,
+                db.rooms.filter(r => r.status === 'Đang bảo trì').length
+            ];
+            if (roomChartInstance) roomChartInstance.destroy();
+            roomChartInstance = new Chart(document.getElementById('roomChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Còn trống', 'Đã đầy', 'Bảo trì'],
+                    datasets: [{ data: roomCounts, backgroundColor: ['#16a34a', '#2563eb', '#dc2626'] }]
+                },
+                options: { plugins: { legend: { position: 'bottom' } }, maintainAspectRatio: false }
+            });
+
+            const repCounts = [
+                db.repairs.filter(r => r.status === 'Đang chờ').length,
+                db.repairs.filter(r => r.status === 'Đang xử lý').length,
+                db.repairs.filter(r => r.status === 'Đã hoàn thành').length
+            ];
+            if (repairChartInstance) repairChartInstance.destroy();
+            repairChartInstance = new Chart(document.getElementById('repairChart'), {
+                type: 'bar',
+                data: {
+                    labels: ['Đang chờ', 'Đang xử lý', 'Hoàn thành'],
+                    datasets: [{ label: 'Yêu cầu', data: repCounts, backgroundColor: ['#f59e0b', '#3b82f6', '#10b981'] }]
+                },
+                options: { scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } }, maintainAspectRatio: false }
+            });
+        }
+
+        function renderRooms() {
+            if (!currentUser || currentUser.role !== 'manager') return;
+
+            sortAndSyncRoomsStudents(db);
+            const q = document.getElementById('searchRoom').value.toLowerCase();
+            const statusFilter = document.getElementById('filterRoomStatus').value;
+            const grid = document.getElementById('roomGrid');
+            grid.innerHTML = '';
+
+            db.rooms
+                .filter(r => r.id.toLowerCase().includes(q) && (statusFilter === 'ALL' || r.status === statusFilter))
+                .forEach(r => {
+                    const occupants = db.students.filter(s => s.room === r.id && s.status === 'Đang ở');
+                    const badgeClass = r.status === 'Còn trống' ? 'bg-green-100 text-green-700' : (r.status === 'Đã đầy' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700');
+
+                    grid.innerHTML += `
+                        <div class="bg-white p-3.5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <h4 class="text-base font-bold text-gray-800">${r.id}</h4>
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${badgeClass}">${r.status}</span>
+                                </div>
+                                <p class="text-[11px] text-gray-500 mb-2">${r.type} • Đang ở: <b>${occupants.length}/${r.capacity} SV</b></p>
+                                <div class="bg-gray-50 p-2.5 rounded-lg border text-[11px] text-gray-700 mb-2">
+                                    <p class="font-semibold text-gray-800 mb-0.5"><i class="fas fa-couch mr-1 text-red-600"></i>CSVC:</p>
+                                    <p class="line-clamp-2">${r.assets}</p>
+                                </div>
+                                <p class="text-[11px] text-gray-500"><b>SV (${occupants.length}):</b> ${occupants.length ? occupants.map(o => o.name).join(', ') : 'Chưa có'}</p>
+                            </div>
+                            <div class="mt-3 pt-2.5 border-t flex justify-between items-center text-xs">
+                                <button onclick="cycleRoomStatus('${r.id}')" class="text-blue-600 hover:underline">Đổi TT</button>
+                                <button onclick="editRoomAssets('${r.id}')" class="text-amber-600 hover:underline">Sửa CSVC</button>
+                                <button onclick="deleteRoom('${r.id}')" class="text-red-600 hover:underline">Xóa</button>
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+
+        function openRoomModal() { document.getElementById('roomModal').classList.remove('hidden'); document.getElementById('roomModal').classList.add('flex'); }
+        function closeRoomModal() { document.getElementById('roomModal').classList.add('hidden'); document.getElementById('roomModal').classList.remove('flex'); }
+        function saveRoom() {
+            if (currentUser.role !== 'manager') return;
+            const id = document.getElementById('modRoomId').value.trim();
+            if (!id) return alert('Vui lòng nhập mã phòng!');
+            db.rooms.push({
+                id, floor: 3,
+                type: document.getElementById('modRoomType').value,
+                capacity: Number(document.getElementById('modRoomCap').value),
+                status: document.getElementById('modRoomStatus').value,
+                assets: document.getElementById('modRoomAssets').value || '1 Điều hòa, 1 Bình nóng lạnh, Giường tầng'
+            });
+            closeRoomModal();
+            saveDB();
+        }
+        function cycleRoomStatus(id) {
+            if (currentUser.role !== 'manager') return;
+            const r = db.rooms.find(x => x.id === id);
+            const order = ['Còn trống', 'Đã đầy', 'Đang bảo trì'];
+            r.status = order[(order.indexOf(r.status) + 1) % order.length];
+            saveDB();
+        }
+        function editRoomAssets(id) {
+            if (currentUser.role !== 'manager') return;
+            const r = db.rooms.find(x => x.id === id);
+            const updated = prompt(`Cập nhật thiết bị CSVC phòng ${id}:`, r.assets);
+            if (updated !== null) { r.assets = updated; saveDB(); }
+        }
+        function deleteRoom(id) {
+            if (currentUser.role !== 'manager') return;
+            if (confirm('Xóa phòng ' + id + '?')) {
+                db.rooms = db.rooms.filter(r => r.id !== id);
+                saveDB();
+            }
+        }
+
+        function renderRepairs() {
+            const tbody = document.getElementById('repairTableBody');
+            tbody.innerHTML = '';
+            const list = currentUser.role === 'manager' ? db.repairs : db.repairs.filter(r => r.room === currentUser.room);
+
+            list.forEach(r => {
+                const badge = r.status === 'Đã hoàn thành' ? 'bg-green-100 text-green-700' : (r.status === 'Đang xử lý' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700');
+                const imgHtml = r.image
+                    ? `<img src="${r.image}" onclick="openImgModal('${r.image}', '${r.room} - ${r.asset}')" class="w-9 h-9 object-cover rounded border border-gray-300 mx-auto cursor-pointer" title="Xem ảnh">`
+                    : `<span class="text-[10px] text-gray-400 italic">Không</span>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2.5 font-bold">${r.id}</td>
+                        <td class="p-2.5 font-semibold text-red-700">${r.room}</td>
+                        <td class="p-2.5">${r.asset}</td>
+                        <td class="p-2.5 max-w-[180px] truncate" title="${r.desc}">${r.desc}</td>
+                        <td class="p-2.5 text-center">${imgHtml}</td>
+                        <td class="p-2.5 text-gray-500">${r.reporter}</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${badge}">${r.status}</span></td>
+                        <td class="p-2.5 text-gray-600 truncate max-w-[120px]">${r.reply}</td>
+                        <td class="p-2.5 text-right whitespace-nowrap space-x-1">
+                            ${currentUser.role === 'manager' ? `
+                                <button onclick="updateRepairStatus('${r.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[11px]">Xử lý</button>
+                                <button onclick="deleteRepair('${r.id}')" class="bg-red-600 text-white px-2 py-1 rounded text-[11px]"><i class="fas fa-trash"></i></button>
+                            ` : `<span class="text-[10px] text-gray-400">Theo dõi</span>`}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function submitRepair() {
+            const desc = document.getElementById('repDesc').value.trim();
+            if (!desc) return alert('Vui lòng nhập mô tả sự cố!');
+            const room = document.getElementById('repRoom').value;
+            const asset = document.getElementById('repAsset').value;
+            db.repairs.unshift({
+                id: 'SC' + Math.floor(100 + Math.random() * 900),
+                room, asset, desc,
+                image: currentRepairImageBase64 || '',
+                reporter: currentUser.role === 'student' ? `${currentUser.name} (${currentUser.mssv})` : 'Sinh viên KTX B5',
+                date: new Date().toLocaleDateString('vi-VN'),
+                status: 'Đang chờ',
+                reply: 'Chờ tiếp nhận'
+            });
+
+            document.getElementById('repDesc').value = '';
+            document.getElementById('repImageInput').value = '';
+            currentRepairImageBase64 = '';
+            document.getElementById('repImgPreview').classList.add('hidden');
+            document.getElementById('repImgLabel').innerText = 'Chụp/Chọn ảnh';
+
+            saveDB();
+            alert('Đã gửi yêu cầu sửa chữa thành công!');
+        }
+
+        function updateRepairStatus(id) {
+            if (currentUser.role !== 'manager') return;
+            const r = db.repairs.find(x => x.id === id);
+            const nextStatus = r.status === 'Đang chờ' ? 'Đang xử lý' : 'Đã hoàn thành';
+            const note = prompt(`Cập nhật phiếu ${id} sang "${nextStatus}". Nhập phản hồi:`, r.reply);
+            if (note !== null) {
+                r.status = nextStatus;
+                r.reply = note || 'Đã xử lý';
+                saveDB();
+            }
+        }
+
+        function deleteRepair(id) {
+            if (currentUser.role !== 'manager') return;
+            db.repairs = db.repairs.filter(r => r.id !== id);
+            saveDB();
+        }
+
+        function renderFeedbacks() {
+            const list = document.getElementById('feedbackList');
+            list.innerHTML = '';
+            db.feedbacks.forEach(f => {
+                const badge = f.status === 'Đã giải quyết' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700';
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 flex flex-col sm:flex-row justify-between gap-2">
+                        <div>
+                            <div class="flex items-center space-x-1.5 mb-1">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${badge}">${f.status}</span>
+                                <h4 class="font-bold text-gray-800 text-xs">${f.title}</h4>
+                            </div>
+                            <p class="text-xs text-gray-600">${f.content}</p>
+                            <p class="text-[10px] text-gray-400 mt-1">${f.student} • ${f.date}</p>
+                            ${f.response ? `<p class="mt-1.5 text-xs bg-red-50 text-red-800 p-2 rounded border border-red-100"><b>BQL:</b> ${f.response}</p>` : ''}
+                        </div>
+                        ${currentUser.role === 'manager' ? `
+                            <div class="flex items-center space-x-1 self-end sm:self-center">
+                                <button onclick="resolveFeedback('${f.id}')" class="hust-red text-white px-2.5 py-1 rounded text-xs">Phản hồi</button>
+                                <button onclick="deleteFeedback('${f.id}')" class="bg-gray-200 text-gray-700 px-2.5 py-1 rounded text-xs"><i class="fas fa-trash"></i></button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        function submitFeedback() {
+            const title = document.getElementById('fbTitle').value.trim();
+            const content = document.getElementById('fbContent').value.trim();
+            if (!title || !content) return alert('Vui lòng nhập đầy đủ tiêu đề và nội dung!');
+            db.feedbacks.unshift({
+                id: 'PA' + Date.now().toString().slice(-3),
+                student: currentUser.role === 'student' ? `${currentUser.name} (${currentUser.mssv})` : 'Sinh viên KTX B5',
+                title, content,
+                date: new Date().toLocaleDateString('vi-VN'),
+                status: 'Chờ xử lý',
+                response: ''
+            });
+            document.getElementById('fbTitle').value = '';
+            document.getElementById('fbContent').value = '';
+            saveDB();
+        }
+
+        function resolveFeedback(id) {
+            if (currentUser.role !== 'manager') return;
+            const f = db.feedbacks.find(x => x.id === id);
+            const rep = prompt('Nhập nội dung phản hồi:', f.response);
+            if (rep !== null) { f.status = 'Đã giải quyết'; f.response = rep; saveDB(); }
+        }
+        function deleteFeedback(id) {
+            if (currentUser.role !== 'manager') return;
+            db.feedbacks = db.feedbacks.filter(f => f.id !== id);
+            saveDB();
+        }
+
+        function renderBills() {
+            const tbody = document.getElementById('billTableBody');
+            tbody.innerHTML = '';
+            const list = currentUser.role === 'manager' ? db.bills : db.bills.filter(b => b.room === currentUser.room);
+
+            list.forEach(b => {
+                const total = b.roomFee + b.utilFee;
+                const badge = b.status === 'Đã thanh toán' ? 'bg-green-100 text-green-700' : (b.status === 'Chờ xác nhận' ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700');
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2.5 font-bold">${b.id}</td>
+                        <td class="p-2.5 font-semibold text-red-700">${b.room}</td>
+                        <td class="p-2.5">${b.month}</td>
+                        <td class="p-2.5 font-bold text-red-700">${total.toLocaleString('vi-VN')} đ</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-semibold ${badge}">${b.status}</span></td>
+                        <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
+                            ${currentUser.role === 'student' ? (
+                                b.status !== 'Đã thanh toán' ? `
+                                    <button onclick="openVietQRModal('${b.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1 rounded text-xs font-semibold">
+                                        <i class="fas fa-qrcode mr-1"></i>Thanh toán QR
+                                    </button>
+                                ` : `<span class="text-[11px] text-green-600 font-semibold"><i class="fas fa-check-circle mr-1"></i>Hoàn tất</span>`
+                            ) : ''}
+                            ${currentUser.role === 'manager' ? `
+                                ${b.status !== 'Đã thanh toán' ? `<button onclick="confirmBill('${b.id}')" class="bg-green-600 hover:bg-green-700 text-white px-2.5 py-1 rounded text-xs font-semibold">Duyệt</button>` : ''}
+                                <button onclick="deleteBill('${b.id}')" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"><i class="fas fa-trash"></i></button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function createBill() {
+            if (currentUser.role !== 'manager') return;
+            db.bills.unshift({
+                id: 'HD' + Math.floor(1000 + Math.random() * 9000),
+                room: document.getElementById('billRoom').value,
+                month: document.getElementById('billMonth').value,
+                roomFee: Number(document.getElementById('billRoomFee').value),
+                utilFee: Number(document.getElementById('billUtilFee').value),
+                status: 'Chưa thanh toán'
+            });
+            saveDB();
+        }
+        function confirmBill(id) { db.bills.find(x => x.id === id).status = 'Đã thanh toán'; saveDB(); }
+        function deleteBill(id) { db.bills = db.bills.filter(b => b.id !== id); saveDB(); }
+
+        function renderNotices() {
+            const list = document.getElementById('noticeList');
+            list.innerHTML = '';
+            db.notices.forEach(n => {
+                list.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl shadow-sm border-l-4 border-red-700 flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center space-x-1.5 mb-0.5">
+                                <h4 class="font-bold text-gray-800 text-xs">${n.title}</h4>
+                                <span class="text-[9px] bg-red-50 text-red-700 px-1.5 py-0.5 rounded font-semibold">${n.target}</span>
+                            </div>
+                            <p class="text-xs text-gray-600">${n.content}</p>
+                            <p class="text-[10px] text-gray-400 mt-1">${n.date}</p>
+                        </div>
+                        ${currentUser.role === 'manager' ? `<button onclick="deleteNotice('${n.id}')" class="text-gray-400 hover:text-red-600 p-1"><i class="fas fa-trash text-xs"></i></button>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+        function postNotice() {
+            if (currentUser.role !== 'manager') return;
+            const title = document.getElementById('noticeTitle').value.trim();
+            const content = document.getElementById('noticeContent').value.trim();
+            if (!title || !content) return alert('Vui lòng nhập tiêu đề và nội dung!');
+            db.notices.unshift({
+                id: 'TB' + Date.now().toString().slice(-3),
+                title, target: document.getElementById('noticeTarget').value, content,
+                date: new Date().toLocaleDateString('vi-VN')
+            });
+            document.getElementById('noticeTitle').value = '';
+            document.getElementById('noticeContent').value = '';
+            saveDB();
+        }
+        function deleteNotice(id) { db.notices = db.notices.filter(n => n.id !== id); saveDB(); }
+
+        function resetDemoData() {
+            if (confirm('Khôi phục toàn bộ dữ liệu về mặc định ban đầu?')) {
+                db = JSON.parse(JSON.stringify(defaultData));
+                saveDB();
+            }
+        }
+
+        function renderAll() {
+            renderDashboard();
+            renderAccounts();
+            renderRooms();
+            renderRepairs();
+            renderFeedbacks();
+            renderBills();
+            renderNotices();
+        }
+    </script>
+</body>     
+</html>
